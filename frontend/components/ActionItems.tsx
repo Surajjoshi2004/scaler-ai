@@ -26,6 +26,7 @@ interface ActionItemsProps {
 }
 
 export default function ActionItems({ meetingId }: ActionItemsProps) {
+  // Load and manage the editable action items belonging to this meeting.
   const [items, setItems] = useState<ActionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +37,7 @@ export default function ActionItems({ meetingId }: ActionItemsProps) {
   const [editAssignee, setEditAssignee] = useState("");
 
   useEffect(() => {
+    // Refresh local items when the rendered meeting changes.
     getActionItems(meetingId)
       .then((data) => {
         setItems(data);
@@ -48,6 +50,7 @@ export default function ActionItems({ meetingId }: ActionItemsProps) {
   }, [meetingId]);
 
   const handleAdd = async (e: FormEvent) => {
+    // Create a validated item and append the server response to local state.
     e.preventDefault();
     if (!newTitle.trim()) return;
     try {
@@ -64,6 +67,7 @@ export default function ActionItems({ meetingId }: ActionItemsProps) {
   };
 
   const handleToggle = async (item: ActionItem) => {
+    // Persist the inverse completion state before replacing the local item.
     try {
       const updated = await updateActionItem(item.id, {
         completed: !item.completed,
@@ -77,12 +81,14 @@ export default function ActionItems({ meetingId }: ActionItemsProps) {
   };
 
   const startEdit = (item: ActionItem) => {
+    // Prime the inline form with the item being edited.
     setEditingId(item.id);
     setEditTitle(item.title);
     setEditAssignee(item.assignee ?? "");
   };
 
   const handleSaveEdit = async (e: FormEvent) => {
+    // Save inline edits and leave editing mode only after a successful response.
     e.preventDefault();
     if (!editingId || !editTitle.trim()) return;
     try {
@@ -100,6 +106,7 @@ export default function ActionItems({ meetingId }: ActionItemsProps) {
   };
 
   const handleDelete = async (item: ActionItem) => {
+    // Request confirmation before removing the item from the server and UI.
     if (!window.confirm(`Delete action item "${item.title}"?`)) return;
     try {
       await deleteActionItem(item.id);

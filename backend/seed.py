@@ -13,8 +13,10 @@ def create_meeting(
     transcript,
     summary_text,
     action_items,
+    media_url=None,
 ):
-    meeting = Meeting(title=title, date=date, duration=duration)
+    """Create a meeting together with its related sample records."""
+    meeting = Meeting(title=title, date=date, duration=duration, media_url=media_url)
     db.add(meeting)
     db.flush()
 
@@ -45,6 +47,7 @@ def create_meeting(
 
 
 def seed():
+    """Populate an empty database with the demo meetings used by the app."""
     Base.metadata.create_all(bind=engine)
 
     db = SessionLocal()
@@ -152,8 +155,47 @@ def seed():
             ],
         )
 
+        create_meeting(
+            db,
+            title="Sample Meeting Recording",
+            date=datetime(2026, 8, 13, 16, 0),
+            duration=43,
+            participants=[
+                ("Suraj Joshi", "suraj@example.com"),
+                ("Rahul Verma", "rahul@example.com"),
+            ],
+            transcript=[
+                (0, "Suraj", "Alright, let's start the recording. Welcome to today's catch-up on the mobile app release."),
+                (90, "Rahul", "Build 2.4 is with QA now. So far no critical blockers, just a couple of UI nits."),
+                (240, "Suraj", "Good. Can we confirm the notification permission prompt is fixed on Android 13?"),
+                (420, "Rahul", "Yes, that landed yesterday and the fix is verified on a physical device."),
+                (600, "Suraj", "What about the crash on app start we saw in the last release candidate?"),
+                (780, "Rahul", "That was a race condition in the session store. The patch is in this build."),
+                (960, "Suraj", "Great. Store review timeline — when do we expect the release to go live?"),
+                (1140, "Rahul", "If QA passes by Thursday, we can submit Friday and expect approval over the weekend."),
+                (1320, "Suraj", "Let's also plan a quick beta invite to the top feedback users before the full rollout."),
+                (1500, "Rahul", "I'll prepare the invite list and draft the release notes before Friday."),
+                (1680, "Suraj", "Sounds good. Anything else blocking the launch?"),
+                (1800, "Rahul", "Just the analytics dashboard cutover, but that is on track and low risk."),
+                (1980, "Suraj", "Perfect, let's reconvene on Thursday after QA signs off."),
+            ],
+            summary_text=(
+                "Key discussion topics: QA status of build 2.4, notification permission fix on Android 13, "
+                "app-start crash fix, store review timeline, beta invites, and analytics dashboard cutover. "
+                "The build is in QA with no critical blockers. The team targets a Friday store submission "
+                "and a beta invite to top feedback users before the full rollout."
+            ),
+            action_items=[
+                ("Prepare beta invite list", "Rahul Verma", False),
+                ("Draft release notes", "Rahul Verma", False),
+                ("Follow up on analytics dashboard cutover", "Suraj Joshi", False),
+                ("Submit build to the store on Friday", "Suraj Joshi", True),
+            ],
+            media_url="/media/video.mp4",
+        )
+
         db.commit()
-        print("Seeded 3 meetings with participants, transcripts, summaries, and action items.")
+        print("Seeded 4 meetings with participants, transcripts, summaries, and action items.")
 
     finally:
         db.close()

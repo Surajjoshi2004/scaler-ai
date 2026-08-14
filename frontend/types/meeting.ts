@@ -32,6 +32,7 @@ export interface Meeting {
   title: string;
   date: string;
   duration: number | null;
+  media_url: string | null;
   participants: Participant[];
   transcript_segments: TranscriptSegment[];
   summary: Summary | null;

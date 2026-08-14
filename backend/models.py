@@ -13,6 +13,7 @@ class Meeting(Base):
     title = Column(String, nullable=False)
     date = Column(DateTime, nullable=False)
     duration = Column(Integer)
+    media_url = Column(String)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

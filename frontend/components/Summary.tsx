@@ -12,6 +12,7 @@ interface SummaryProps {
 }
 
 function formatClock(seconds: number) {
+  // Convert chapter offsets into a fixed-width minutes-and-seconds label.
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
@@ -24,6 +25,7 @@ function SectionHeading({
   icon: React.ReactNode;
   title: string;
 }) {
+  // Keep the icon-and-title treatment consistent across summary sections.
   return (
     <h2 className="flex items-center gap-2 text-sm font-semibold text-zinc-900">
       <span className="flex h-6 w-6 items-center justify-center rounded-md bg-violet-100 text-violet-600">
@@ -39,6 +41,7 @@ export default function Summary({
   topics = [],
   chapters = [],
 }: SummaryProps) {
+  // Render the available generated summary data and clear empty states.
   return (
     <div className="space-y-6">
       <section className="rounded-xl border border-zinc-200 bg-white p-5">

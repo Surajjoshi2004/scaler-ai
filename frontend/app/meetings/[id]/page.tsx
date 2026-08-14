@@ -21,16 +21,27 @@ import {
 
 import Navbar from "../../../components/Navbar";
 import Sidebar from "../../../components/Sidebar";
-import { deleteMeeting, getMeeting } from "../../../lib/api";
+import { deleteMeeting, getMeeting, mediaUrl } from "../../../lib/api";
 import { Meeting, TranscriptSegment } from "../../../types/meeting";
 
 function formatClock(seconds: number) {
+  // Format a transcript-relative playback offset as mm:ss.
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+function mediaKind(path: string | null): "video" | "audio" | null {
+  // Detect whether a stored media URL points to a video or an audio file.
+  if (!path) return null;
+  const ext = path.split("?")[0].split(".").pop()?.toLowerCase() ?? "";
+  if (["mp4", "webm", "mov", "m4v"].includes(ext)) return "video";
+  if (["mp3", "m4a", "wav", "ogg"].includes(ext)) return "audio";
+  return "video";
+}
+
 function formatDate(date: string) {
+  // Render the meeting date using the viewer's locale.
   return new Date(date).toLocaleDateString(undefined, {
     weekday: "short",
     month: "short",
@@ -40,6 +51,7 @@ function formatDate(date: string) {
 }
 
 function formatTime(date: string) {
+  // Render the meeting start time using the viewer's locale.
   return new Date(date).toLocaleTimeString(undefined, {
     hour: "2-digit",
     minute: "2-digit",
@@ -47,6 +59,7 @@ function formatTime(date: string) {
 }
 
 function formatDuration(minutes: number | null) {
+  // Turn a duration in minutes into a concise human-readable label.
   if (!minutes) return "Duration TBD";
   if (minutes < 60) return `${minutes} min`;
   const hrs = Math.floor(minutes / 60);
@@ -55,6 +68,7 @@ function formatDuration(minutes: number | null) {
 }
 
 function extractTopics(overview: string | null): string[] {
+  // Pull the comma-separated topic list from the seeded summary convention.
   if (!overview) return [];
   const marker = "Key discussion topics:";
   const idx = overview.indexOf(marker);
@@ -69,6 +83,7 @@ function extractTopics(overview: string | null): string[] {
 type SegmentWithOffset = TranscriptSegment & { offset: number };
 
 function HighlightedText({ text, query }: { text: string; query: string }) {
+  // Escape the search query before constructing the highlight regular expression.
   const q = query.trim();
   if (!q) return <>{text}</>;
 
@@ -89,18 +104,94 @@ function HighlightedText({ text, query }: { text: string; query: string }) {
 }
 
 function Player({
+  src,
+  mediaType,
   duration,
   currentTime,
   isPlaying,
+  onTimeChange,
+  onDurationChange,
   onSeek,
   onToggle,
 }: {
+  src: string | null;
+  mediaType: "video" | "audio" | null;
   duration: number;
   currentTime: number;
   isPlaying: boolean;
+  onTimeChange: (time: number) => void;
+  onDurationChange: (time: number) => void;
   onSeek: (time: number) => void;
   onToggle: () => void;
 }) {
+  const mediaRef = useRef<HTMLVideoElement | HTMLAudioElement | null>(null);
+
+  // Mirror local play state onto the native media element when one exists.
+  useEffect(() => {
+    if (!src) return;
+    const media = mediaRef.current;
+    if (!media) return;
+    if (isPlaying) void media.play();
+    else media.pause();
+  }, [isPlaying, src]);
+
+  // Jump the media element when the current time changes from outside (transcript clicks).
+  useEffect(() => {
+    if (!src) return;
+    const media = mediaRef.current;
+    if (!media) return;
+    if (Math.abs(media.currentTime - currentTime) > 0.2) {
+      media.currentTime = currentTime;
+    }
+  }, [src, currentTime]);
+
+  const handleToggle = () => {
+    // Restart a completed placeholder timeline before playing it again.
+    if (!isPlaying && !src && currentTime >= duration) onSeek(0);
+    onToggle();
+  };
+
+  const handleSeek = (time: number) => {
+    onSeek(time);
+    if (src && mediaRef.current) {
+      mediaRef.current.currentTime = time;
+    }
+  };
+
+  if (src && mediaType) {
+    const common = {
+      ref: mediaRef as never,
+      src,
+      controls: true,
+      preload: "metadata",
+      onTimeUpdate: () => {
+        if (mediaRef.current) onTimeChange(mediaRef.current.currentTime);
+      },
+      onLoadedMetadata: () => {
+        if (mediaRef.current && mediaRef.current.duration) {
+          onDurationChange(mediaRef.current.duration);
+        }
+      },
+      onEnded: () => {
+        if (mediaRef.current) onTimeChange(mediaRef.current.duration);
+      },
+    };
+
+    return (
+      <div className="rounded-xl border border-zinc-200 bg-zinc-900 p-5 text-white">
+        {mediaType === "video" ? (
+          <video {...common} className="aspect-video w-full rounded-lg bg-black" />
+        ) : (
+          <audio {...common} className="w-full" />
+        )}
+        <p className="mt-3 text-[11px] text-zinc-500">
+          Playing meeting recording — seek to sync with the transcript.
+        </p>
+      </div>
+    );
+  }
+
+  // Placeholder timeline used when the meeting has no uploaded recording.
   const heights = Array.from({ length: 48 }, (_, i) => 8 + ((i * 17) % 24));
 
   return (
@@ -108,7 +199,7 @@ function Player({
       <div className="flex items-center gap-4">
         <button
           type="button"
-          onClick={onToggle}
+          onClick={handleToggle}
           aria-label={isPlaying ? "Pause" : "Play"}
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-violet-600 text-white transition-colors hover:bg-violet-700"
         >
@@ -133,10 +224,10 @@ function Player({
       <input
         type="range"
         min={0}
-        max={duration}
+        max={Math.max(duration, 1)}
         step={1}
         value={currentTime}
-        onChange={(e) => onSeek(Number(e.target.value))}
+        onChange={(e) => handleSeek(Number(e.target.value))}
         className="mt-4 w-full accent-violet-500"
         aria-label="Seek bar"
       />
@@ -149,6 +240,7 @@ function Player({
 }
 
 function LoadingState() {
+  // Reuse the same loading placeholder for both the page and Suspense boundary.
   return (
     <div className="rounded-xl border border-zinc-200 bg-white p-8 text-center text-sm text-zinc-500">
       Loading meeting...
@@ -157,6 +249,7 @@ function LoadingState() {
 }
 
 function MeetingDetail() {
+  // Load the selected meeting and coordinate transcript playback, search, and deletion.
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id = Number(params.id);
@@ -167,14 +260,17 @@ function MeetingDetail() {
   const [search, setSearch] = useState("");
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [mediaDuration, setMediaDuration] = useState<number | null>(null);
   const activeRef = useRef<HTMLDivElement | null>(null);
   const currentTimeRef = useRef(currentTime);
 
   useEffect(() => {
+    // Make the interval callback read the latest playback position.
     currentTimeRef.current = currentTime;
   }, [currentTime]);
 
   useEffect(() => {
+    // Fetch fresh detail data whenever the dynamic route ID changes.
     getMeeting(id)
       .then((data) => {
         setMeeting(data);
@@ -187,6 +283,7 @@ function MeetingDetail() {
   }, [id]);
 
   const segments = useMemo<SegmentWithOffset[]>(() => {
+    // Convert absolute segment timestamps into sorted offsets from the meeting start.
     if (!meeting) return [];
     const start = new Date(meeting.date).getTime();
     return meeting.transcript_segments
@@ -201,13 +298,17 @@ function MeetingDetail() {
   }, [meeting]);
 
   const duration = useMemo(() => {
+    // Prefer the actual recording length once it is known, otherwise estimate
+    // from the stated duration or the last transcript segment.
+    if (mediaDuration && mediaDuration > 0) return mediaDuration;
     if (!meeting) return 0;
     const fromDuration = (meeting.duration ?? 0) * 60;
     const lastSegment = segments[segments.length - 1]?.offset ?? 0;
     return Math.max(fromDuration, lastSegment + 60);
-  }, [meeting, segments]);
+  }, [meeting, segments, mediaDuration]);
 
   const activeIndex = useMemo(() => {
+    // Identify the latest transcript segment reached by playback.
     let idx = -1;
     segments.forEach((segment, i) => {
       if (segment.offset <= currentTime) idx = i;
@@ -216,6 +317,7 @@ function MeetingDetail() {
   }, [segments, currentTime]);
 
   const filteredSegments = useMemo(() => {
+    // Match the user's query against both speaker names and transcript text.
     const q = search.trim().toLowerCase();
     if (!q) return segments;
     return segments.filter(
@@ -226,10 +328,12 @@ function MeetingDetail() {
   }, [segments, search]);
 
   useEffect(() => {
+    // Keep the active transcript segment visible as playback advances.
     activeRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [activeIndex]);
 
   useEffect(() => {
+    // Advance the placeholder player once per second and stop at the end.
     if (!isPlaying) return;
     const interval = setInterval(() => {
       const next = currentTimeRef.current + 1;
@@ -244,6 +348,7 @@ function MeetingDetail() {
   }, [isPlaying, duration]);
 
   const handleTogglePlay = () => {
+    // Resume or pause playback, restarting from zero if it has completed.
     if (isPlaying) {
       setIsPlaying(false);
     } else {
@@ -253,6 +358,7 @@ function MeetingDetail() {
   };
 
   const handleDelete = async () => {
+    // Confirm destructive deletion before returning to the meeting list.
     if (!meeting) return;
     if (!window.confirm(`Delete "${meeting.title}" and all of its data?`)) return;
     try {
@@ -347,9 +453,13 @@ function MeetingDetail() {
                 <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
                   <section className="lg:col-span-2">
                     <Player
+                      src={mediaUrl(meeting.media_url)}
+                      mediaType={mediaKind(meeting.media_url)}
                       duration={duration}
                       currentTime={currentTime}
                       isPlaying={isPlaying}
+                      onTimeChange={setCurrentTime}
+                      onDurationChange={setMediaDuration}
                       onSeek={setCurrentTime}
                       onToggle={handleTogglePlay}
                     />
@@ -495,6 +605,7 @@ function MeetingDetail() {
 }
 
 export default function MeetingPage() {
+  // Delay route-dependent content until its navigation data is available.
   return (
     <Suspense fallback={<LoadingState />}>
       <MeetingDetail />

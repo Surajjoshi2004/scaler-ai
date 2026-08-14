@@ -1,10 +1,11 @@
 import { Bell, Search, Settings } from "lucide-react";
 
-export default function Navbar() {
+export default function Navbar({ title = "Meetings" }: { title?: string }) {
+  // Render the shared top bar, with an optional page-specific title.
   return (
     <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-zinc-200 bg-white px-6">
       <h1 className="text-lg font-semibold tracking-tight text-zinc-900">
-        Meetings
+        {title}
       </h1>
 
       <div className="relative w-full max-w-md">

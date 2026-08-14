@@ -11,6 +11,7 @@ import { getMeetings } from "../lib/api";
 import { Meeting } from "../types/meeting";
 
 export default function Home() {
+  // Fetch, search, and locally sort the meeting library.
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,6 +19,7 @@ export default function Home() {
   const [sort, setSort] = useState<"newest" | "oldest">("newest");
 
   useEffect(() => {
+    // Load the initial list once when the page mounts.
     getMeetings()
       .then((data) => {
         setMeetings(data);
@@ -30,6 +32,7 @@ export default function Home() {
   }, []);
 
   const filteredMeetings = useMemo(() => {
+    // Filter first, then copy before sorting to avoid mutating React state.
     const filtered = meetings.filter((meeting) =>
       meeting.title.toLowerCase().includes(search.toLowerCase())
     );

@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  // Apply shared fonts and base document structure to every route.
   return (
     <html
       lang="en"

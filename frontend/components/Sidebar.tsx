@@ -10,9 +10,11 @@ const navItems = [
 ];
 
 export default function Sidebar() {
+  // Highlight the navigation entry that matches the current route.
   const pathname = usePathname();
 
   const isActive = (href: string) =>
+    // The root path needs an exact match so it is not active for every route.
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
   return (

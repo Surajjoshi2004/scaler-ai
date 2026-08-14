@@ -1,6 +1,8 @@
+import uuid
+from pathlib import Path
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, selectinload
 
@@ -9,6 +11,9 @@ import schemas
 from database import get_db
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
+
+MEDIA_DIR = Path(__file__).resolve().parent.parent / "media"
+ALLOWED_MEDIA_EXTENSIONS = {".mp4", ".webm", ".mov", ".m4v", ".mp3", ".m4a", ".wav", ".ogg"}
 
 
 class ParticipantInput(BaseModel):
@@ -26,6 +31,7 @@ def list_meetings(
     sort: str = "newest",
     db: Session = Depends(get_db),
 ):
+    """List meetings, optionally filtering by title and ordering by date."""
     query = db.query(models.Meeting)
 
     if search:
@@ -41,6 +47,7 @@ def list_meetings(
 
 @router.post("", response_model=schemas.MeetingResponse, status_code=201)
 def create_meeting(payload: schemas.MeetingCreate, db: Session = Depends(get_db)):
+    """Create and return a meeting without any related records."""
     meeting = models.Meeting(
         title=payload.title,
         date=payload.date,
@@ -52,8 +59,42 @@ def create_meeting(payload: schemas.MeetingCreate, db: Session = Depends(get_db)
     return meeting
 
 
+@router.post("/{meeting_id}/media", response_model=schemas.MeetingResponse)
+def upload_meeting_media(
+    meeting_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+):
+    """Attach a video or audio file to an existing meeting and persist its URL."""
+    meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
+
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+
+    extension = Path(file.filename or "").suffix.lower()
+    if extension not in ALLOWED_MEDIA_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type. Allowed: {sorted(ALLOWED_MEDIA_EXTENSIONS)}",
+        )
+
+    MEDIA_DIR.mkdir(exist_ok=True)
+    filename = f"{uuid.uuid4().hex}{extension}"
+    destination = MEDIA_DIR / filename
+
+    with destination.open("wb") as buffer:
+        while chunk := file.file.read(1024 * 1024):
+            buffer.write(chunk)
+
+    meeting.media_url = f"/media/{filename}"
+    db.commit()
+    db.refresh(meeting)
+    return meeting
+
+
 @router.get("/{meeting_id}")
 def get_meeting(meeting_id: int, db: Session = Depends(get_db)):
+    """Return one meeting with its participants, transcript, summary, and actions."""
     meeting = (
         db.query(models.Meeting)
         .options(
@@ -91,12 +132,29 @@ def get_meeting(meeting_id: int, db: Session = Depends(get_db)):
     }
 
 
+@router.get("/{meeting_id}/summary", response_model=Optional[schemas.Summary])
+def get_meeting_summary(meeting_id: int, db: Session = Depends(get_db)):
+    """Return the summary associated with an existing meeting, if present."""
+    meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
+
+    if not meeting:
+        raise HTTPException(status_code=404, detail="Meeting not found")
+
+    summary = (
+        db.query(models.Summary)
+        .filter(models.Summary.meeting_id == meeting_id)
+        .first()
+    )
+    return summary
+
+
 @router.put("/{meeting_id}", response_model=schemas.MeetingResponse)
 def update_meeting(
     meeting_id: int,
     payload: MeetingUpdateWithParticipants,
     db: Session = Depends(get_db),
 ):
+    """Update meeting fields and replace participants when they are supplied."""
     meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
 
     if not meeting:
@@ -121,6 +179,7 @@ def update_meeting(
 
 @router.delete("/{meeting_id}")
 def delete_meeting(meeting_id: int, db: Session = Depends(get_db)):
+    """Permanently remove a meeting by ID."""
     meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
 
     if not meeting:

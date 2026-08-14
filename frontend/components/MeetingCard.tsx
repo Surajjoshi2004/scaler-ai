@@ -4,6 +4,7 @@ import { Calendar, Clock, Users } from "lucide-react";
 import { Meeting } from "../types/meeting";
 
 function formatDate(date: string) {
+  // Use the viewer's locale for a concise meeting-card date.
   return new Date(date).toLocaleDateString(undefined, {
     weekday: "short",
     month: "short",
@@ -13,6 +14,7 @@ function formatDate(date: string) {
 }
 
 function formatDuration(minutes: number | null) {
+  // Present minutes in the most readable short form, including a missing-state label.
   if (!minutes) return "Duration TBD";
   if (minutes < 60) return `${minutes} min`;
   const hrs = Math.floor(minutes / 60);
@@ -21,6 +23,7 @@ function formatDuration(minutes: number | null) {
 }
 
 function initials(name: string) {
+  // Build a two-character avatar label from the participant's name.
   return name
     .split(" ")
     .map((part) => part[0])
@@ -30,6 +33,7 @@ function initials(name: string) {
 }
 
 export default function MeetingCard({ meeting }: { meeting: Meeting }) {
+  // Render one navigable summary card, limiting visible avatars to three.
   const participants = meeting.participants ?? [];
   const shown = participants.slice(0, 3);
   const remaining = participants.length - shown.length;

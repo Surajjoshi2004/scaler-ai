@@ -23,6 +23,7 @@ class MeetingResponse(BaseModel):
     title: str
     date: datetime
     duration: Optional[int] = None
+    media_url: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 

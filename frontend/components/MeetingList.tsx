@@ -4,6 +4,7 @@ import { Meeting } from "../types/meeting";
 import MeetingCard from "./MeetingCard";
 
 export default function MeetingList({ meetings }: { meetings: Meeting[] }) {
+  // Show either an empty state or the responsive grid of meeting cards.
   if (meetings.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-16 text-center">

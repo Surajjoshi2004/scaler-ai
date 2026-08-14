@@ -13,6 +13,7 @@ Base = declarative_base()
 
 
 def get_db():
+    """Provide one database session per request and always close it afterward."""
     db = SessionLocal()
     try:
         yield db

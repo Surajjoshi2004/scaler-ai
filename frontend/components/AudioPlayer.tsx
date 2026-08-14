@@ -13,6 +13,7 @@ interface AudioPlayerProps {
 }
 
 function formatClock(seconds: number) {
+  // Clamp and format playback seconds for the player's elapsed-time display.
   const safe = Math.max(0, Math.floor(seconds));
   const m = Math.floor(safe / 60);
   const s = safe % 60;
@@ -27,6 +28,7 @@ export default function AudioPlayer({
   onSeek,
   onPlayStateChange,
 }: AudioPlayerProps) {
+  // Control real audio when available, or simulate a timeline for demo meetings.
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -36,22 +38,27 @@ export default function AudioPlayer({
   const onPlayStateChangeRef = useRef(onPlayStateChange);
 
   useEffect(() => {
+    // Keep the interval callback synchronized with externally controlled time.
     currentTimeRef.current = currentTime;
   }, [currentTime]);
 
   useEffect(() => {
+    // Keep the interval callback synchronized with the latest parent callback.
     onTimeChangeRef.current = onTimeChange;
   }, [onTimeChange]);
 
   useEffect(() => {
+    // Keep seek behavior current without restarting the fallback interval.
     onSeekRef.current = onSeek;
   }, [onSeek]);
 
   useEffect(() => {
+    // Keep the optional play-state callback current without restarting playback.
     onPlayStateChangeRef.current = onPlayStateChange;
   }, [onPlayStateChange]);
 
   useEffect(() => {
+    // Mirror local play state to the native audio element when one exists.
     if (!src) return;
     const audio = audioRef.current;
     if (!audio) return;
@@ -63,6 +70,7 @@ export default function AudioPlayer({
   }, [isPlaying, src]);
 
   useEffect(() => {
+    // Advance the placeholder timeline only when no audio source is available.
     if (!isPlaying || src) return;
     const interval = setInterval(() => {
       const next = currentTimeRef.current + 1;
@@ -78,6 +86,7 @@ export default function AudioPlayer({
   }, [isPlaying, src, duration]);
 
   const handleToggle = () => {
+    // Restart a completed placeholder timeline before playing it again.
     const wasPlaying = isPlaying;
     if (!wasPlaying && !src && currentTimeRef.current >= duration) {
       onSeekRef.current(0);
@@ -87,6 +96,7 @@ export default function AudioPlayer({
   };
 
   const handleSeek = (time: number) => {
+    // Update parent state and the native element, when present, in one place.
     onSeekRef.current(time);
     if (src && audioRef.current) {
       audioRef.current.currentTime = time;

@@ -13,6 +13,7 @@ interface TranscriptProps {
 }
 
 function formatTime(timestamp: string) {
+  // Display an absolute transcript timestamp in the viewer's locale.
   return new Date(timestamp).toLocaleTimeString(undefined, {
     hour: "2-digit",
     minute: "2-digit",
@@ -20,6 +21,7 @@ function formatTime(timestamp: string) {
 }
 
 function HighlightedText({ text, query }: { text: string; query: string }) {
+  // Escape the search query before using it in a case-insensitive highlight regex.
   const q = query.trim();
   if (!q) return <>{text}</>;
 
@@ -49,9 +51,11 @@ export default function Transcript({
   meetingStart,
   onSegmentClick,
 }: TranscriptProps) {
+  // Derive playback offsets, filter results, and keep the active segment in view.
   const activeRef = useRef<HTMLDivElement | null>(null);
 
   const items = useMemo(() => {
+    // Measure each timestamp from the meeting start so it can follow playback time.
     const base = new Date(meetingStart ?? segments[0]?.timestamp ?? "").getTime();
     return segments
       .map((segment) => ({
@@ -66,6 +70,7 @@ export default function Transcript({
   }, [segments, meetingStart]);
 
   const activeIndex = useMemo(() => {
+    // The latest segment at or before playback time is the active one.
     let idx = -1;
     items.forEach((segment, i) => {
       if (segment.offset <= currentTime) idx = i;
@@ -74,6 +79,7 @@ export default function Transcript({
   }, [items, currentTime]);
 
   const filtered = useMemo(() => {
+    // Match both speaker and spoken text for transcript search.
     const q = searchQuery.trim().toLowerCase();
     if (!q) return items;
     return items.filter(
@@ -84,6 +90,7 @@ export default function Transcript({
   }, [items, searchQuery]);
 
   useEffect(() => {
+    // Gently reveal the active segment as playback advances.
     activeRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [activeIndex]);
 

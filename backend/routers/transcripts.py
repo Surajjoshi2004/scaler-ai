@@ -20,6 +20,7 @@ class TranscriptSegmentInput(BaseModel):
 
 @router.get("", response_model=List[schemas.TranscriptSegment])
 def get_transcript(meeting_id: int, db: Session = Depends(get_db)):
+    """Return an existing meeting's transcript in chronological order."""
     meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
 
     if not meeting:
@@ -40,6 +41,7 @@ def add_transcript_segment(
     payload: TranscriptSegmentInput,
     db: Session = Depends(get_db),
 ):
+    """Append one transcript segment to an existing meeting."""
     meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
 
     if not meeting:

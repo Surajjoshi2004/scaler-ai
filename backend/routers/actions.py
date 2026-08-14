@@ -19,6 +19,7 @@ class ActionItemInput(BaseModel):
 
 @router.get("/meetings/{meeting_id}/actions", response_model=List[schemas.ActionItemResponse])
 def list_action_items(meeting_id: int, db: Session = Depends(get_db)):
+    """Return every action item for an existing meeting."""
     meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
 
     if not meeting:
@@ -38,6 +39,7 @@ def create_action_item(
     payload: ActionItemInput,
     db: Session = Depends(get_db),
 ):
+    """Create an action item under the specified meeting."""
     meeting = db.query(models.Meeting).filter(models.Meeting.id == meeting_id).first()
 
     if not meeting:
@@ -61,6 +63,7 @@ def update_action_item(
     payload: schemas.ActionItemUpdate,
     db: Session = Depends(get_db),
 ):
+    """Apply the supplied fields to one action item."""
     item = db.query(models.ActionItem).filter(models.ActionItem.id == action_id).first()
 
     if not item:
@@ -80,6 +83,7 @@ def update_action_item(
 
 @router.delete("/actions/{action_id}")
 def delete_action_item(action_id: int, db: Session = Depends(get_db)):
+    """Permanently remove an action item by ID."""
     item = db.query(models.ActionItem).filter(models.ActionItem.id == action_id).first()
 
     if not item:
