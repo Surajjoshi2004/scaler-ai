@@ -5,12 +5,7 @@ experience. The application focuses on the post-meeting workflow:
 browsing meetings, reviewing interactive transcripts, searching
 conversations, understanding summaries, and managing action items.
 
-> **Important:** This project is inspired by the layout and user
-> experience of Fireflies.ai, but uses its own implementation and only
-> the features required by the assignment. Real-time transcription,
-> authentication, meeting integrations, and other advanced Fireflies
-> features are outside the MVP.
-
+LINK -https://scaleraifireflies425.vercel.app
 ------------------------------------------------------------------------
 
 ## 1. Problem
