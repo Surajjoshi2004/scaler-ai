@@ -5,7 +5,8 @@ import {
   TranscriptSegment,
 } from "../types/meeting";
 
-const BASE_URL = "http://localhost:8000";
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL?.replace(/\/+$/, "") ?? "http://localhost:8000";
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   // Centralize JSON requests and turn unsuccessful HTTP responses into errors.
